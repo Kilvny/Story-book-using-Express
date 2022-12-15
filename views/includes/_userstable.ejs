@@ -1,0 +1,23 @@
+<% users.forEach((user,index) => { %>
+<tr>
+    <td><%= index+1 %></td>
+    <td><%= user.name %></td>
+    <td><%= user.email %></td>
+    <td><%= user.gender %></td>
+    <td><%= user.status %></td>
+    <td>
+        <!-- I will update the href for the update button so that we can pass an id (the user's id) -->
+        <a href="/update_user?id=<%= user._id%>" class="btn border-shadow update">
+            <span class="text-gradient">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </span>
+        </a>
+        <a href="#" class="btn border-shadow delete" data-id=<%= user._id%>>
+            <span class="text-gradient">
+                <i class="fa-solid fa-trash-can"></i>
+            </span>
+        </a>
+    </td>
+</tr>
+<!-- end of the for loop -->
+<% }) %> 
