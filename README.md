@@ -6,7 +6,7 @@ A story book app to apply what I learned with NodeJS/express
 - Create account using googleOauth
 - Save user's info and stories on mongoose cloud mongoDB
 - Read, update and delete records from mongoDB
-- Keep the seesion for the loggedn in user 
+- Keep the seesion for the logged in user 
 - Creating API routes
 - Protecting API routes / authenticate access
 - Different errors handling
