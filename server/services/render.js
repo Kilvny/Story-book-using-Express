@@ -1,53 +1,175 @@
-// I seprated the call-back function in this services folder with the router second args (callback fn) for better project structer and cleaner code reading
+const Story = require('../../models/Story')
 
-const axios = require('axios')
-
-
-exports.homeRoutes = (req,res) => {
-    // GET from api/users
-    axios.get('http://localhost:3000/api/users')
-        .then(response => {
-            console.log(response.data) // remember that this will console.log on the server side 
-            res.render('index',{ users: response.data })
-        })
-        .catch(err => {
-            console.log(err)
-            res.send(err)
-        })
+exports.loginPage = (req, res) => {
+    res.render('login', { layout: 'login' })
 }
 
-exports.addUserRoutes = (req, res) => {
-    res.render('add_user')
-}
+exports.dashBoard = async (req, res) => {
 
-exports.updateUser = (req, res) => {
-    // passing the api put link + option to get a specific user only , params with query id will do it 
-    axios.get('http://localhost:3000/api/users',{params: {id: req.query.id }})
-        .then(response => {
-            res.render('update_user',{user: response.data}) // here I'm passing the user variable from the response i will get from accessing the api/users/id?=user._id so I can now access the user variable I passed in the update_user file!
+    try {
+        const stories = await Story.find({ user: req.user.id }).lean()
+
+        res.render('dashboard', {
+            name: req.user.firstName,
+            stories
         })
-        .catch(err => res.send(err))
+    } catch (error) {
+        console.log(error)
+        res.render('error/500')
+    }
+}
+
+exports.logout = (req, res) => {
+    req.logout(function (err) {
+        if (err) { return next(err); }
+    })  // request object have a logout method
+    res.redirect('/') // redirect the user to home
+}
+
+// a logout route that was previously:
+
+// app.post('/logout', function(req, res, next) {
+//   req.logout();
+//   res.redirect('/');
+// });
+// should be modified to:
+
+// app.post('/logout', function(req, res, next) {
+//   req.logout(function(err) {
+//     if (err) { return next(err); }
+//     res.redirect('/');
+//   });
+// });
+
+exports.addStory = (req, res) => {
+
+    try {
+        res.render('stories/add')
+
+    } catch (error) {
+        console.log(error)
+        res.redirect('/error/404')
+    }
+}
+
+exports.storyPost = async (req, res) => {
+    try {
+        req.body.user = req.user.id
+        await Story.create(req.body)
+        res.redirect('/dashboard')
+    } catch (error) {
+        console.error(error)
+        res.render('error/500')
+    }
+}
+
+exports.allStories = async (req, res) => {
+    try {
+        const stories = await Story.find({ status: 'public' })
+            .populate('user')
+            .sort({ createdAt: 'desc' })
+            .lean()
+        res.render('stories/index', {
+            stories,
+        })
+    } catch (error) {
+        console.log(error)
+        res.render('error/500')
+    }
 }
 
 
+exports.editStory = async (req, res) => {
+    const story = await Story.findOne({
+        _id: req.params.id
+    }).lean()
+
+    if (!story) {
+        return res.render('error/404')
+    }
+
+    // protect the stories of each user to make the same user the only one able to edit
+    if (story.user != req.user.id) {
+        res.redirect('/stories')
+    } else {
+        res.render('stories/edit', {
+            story,
+        })
+    }
+}
 
 
+exports.updateStory = async (req, res) => {
+
+    try {
+
+        let story = await Story.findById(req.params.id).lean()
+
+        if (!story) {
+            return res.render('error/404')
+        }
+        if (story.user != req.user.id) {
+            res.redirect('/stories')
+        } else {
+            story = await Story.findOneAndUpdate({ _id: req.params.id }, req.body, {
+                new: true,
+                runValidators: true
+            })
+
+            res.redirect('/dashboard')
+        }
+
+    } catch (error) {
+        console.log(error)
+        res.redirect('error/500')
+    }
+}
 
 
+exports.deleteStory = async (req, res) => {
+    try {
+        await Story.remove({ _id: req.params.id })
+        res.redirect('/dashboard')
+    } catch (error) {
+        console.log(error)
+        res.render('error/404')
+    }
+}
 
-// route.get('/',((req,res)=> {
-//     // res.send('Crud Application')
-//     res.render('index') // to need to specify the filetype as we initilized the view engine with this file extension
-// }))
+exports.getStory = async (req, res) => {
+    try {
+        let story = await Story.findById(req.params.id)
+            .populate('user')
+            .lean()
 
-// // route for add_user
-// route.get('/add-user',((req,res)=> {
-//     // res.send('Crud Application')
-//     res.render('add_user') // to need to specify the filetype as we initilized the view engine with this file extension
-// }))
-// // route for update_user
-// route.get('/update_user',((req,res)=> {
-//     // res.send('Crud Application')
-//     res.render('update_user') // to need to specify the filetype as we initilized the view engine with this file extension
-// }))
+        if (!story) {
+            return res.render('error/404')
+        }
 
+        res.render('stories/show', {
+            story
+        })
+    } catch (error) {
+        console.log(error)
+        res.redirect('error/500')
+    }
+}
+
+
+exports.userStory = async (req, res) => {
+    try {
+        console.log(req.params.id)
+        const stories = await Story.find({
+            user: req.params.id, // choose a single user by the current id
+            status: 'public'
+        })
+            .populate('user')
+            .lean()
+        res.render('stories/index', {
+            stories, // render with stories holding the selected user only
+        })
+    } catch (error) {
+        console.error(error)
+        res.render('error/500')
+    }
+}
